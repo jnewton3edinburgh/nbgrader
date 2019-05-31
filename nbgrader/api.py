@@ -56,6 +56,8 @@ class Assignment(Base):
     #: (Optional) Duedate for the assignment in datetime format, with UTC timezone
     duedate = Column(DateTime())
 
+    course_id = Column(String(128), nullable=True)
+
     #: A collection of notebooks contained in this assignment, represented
     #: by :class:`~nbgrader.api.Notebook` objects
     notebooks = relationship("Notebook", backref="assignment", order_by="Notebook.name")
@@ -80,6 +82,12 @@ class Assignment(Base):
     #: calculated from the :attr:`~nbgrader.api.Notebook.max_written_score` of
     #: each notebook
     max_written_score = None
+
+    def __init__(self, name, duedate=None, course_id=None):
+        self.name = name
+        self.duedate = duedate
+        self.course_id = course_id
+
 
     def to_dict(self):
         """Convert the assignment object to a JSON-friendly dictionary
@@ -1549,7 +1557,7 @@ class Gradebook(object):
         """
         if 'duedate' in kwargs:
             kwargs['duedate'] = utils.parse_utc(kwargs['duedate'])
-        assignment = Assignment(name=name, **kwargs)
+        assignment = Assignment(name=name, course_id=self.course_id, **kwargs)
         self.db.add(assignment)
         try:
             self.db.commit()
