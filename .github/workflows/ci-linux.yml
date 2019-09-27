@@ -1,0 +1,36 @@
+name: CI
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python:
+          - '2.7'
+          - '3.5'
+          - '3.6'
+          - nightly
+        group:
+          - python
+          - nbextensions
+          - docs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Setup System
+        run: |
+          sudo apt-get install libsqlite3-dev pandoc firefox
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install dependencies
+        run: |
+          pip install -U pip wheel setuptools
+          wget https://github.com/mozilla/geckodriver/releases/download/v0.23.0/geckodriver-v0.23.0-linux64.tar.gz
+          mkdir geckodriver
+          tar -xzf geckodriver-v0.23.0-linux64.tar.gz -C geckodriver
+          export PATH=$PATH:$PWD/geckodriver
+          python tasks.py install --group="${{ matrix.group }}"
+      - name: Test
+        run: python tasks.py tests --group="${{ matrix.group }}"
