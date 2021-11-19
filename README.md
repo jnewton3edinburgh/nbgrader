@@ -1,56 +1,122 @@
-# nbgrader
+# How to install nbgrader-to-jupyterlab
 
 Build: [![Build](https://img.shields.io/github/workflow/status/jupyter/nbgrader/Test?logo=github&label=tests)](https://github.com/jupyter/nbgrader/actions)  
 Forum: [![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/jupyter)  
 Coverage: [![codecov.io](http://codecov.io/github/jupyter/nbgrader/coverage.svg?branch=master)](http://codecov.io/github/jupyter/nbgrader?branch=master)  
 Cite: [![DOI](https://jose.theoj.org/papers/10.21105/jose.00032/status.svg)](https://doi.org/10.21105/jose.00032)
 
-A system for assigning and grading Jupyter notebooks.
+I am in an early stage of learning how to use git and GitHub, so there may be some unintended handlings of codes. I would be happy if you write any of your findings in the Issues, which I will fix as soon as I can.  
 
-[Documentation can be found on Read the Docs.](https://nbgrader.readthedocs.io/en/stable/)
+This installation method worked at least for me.
 
-## Highlights of nbgrader
-
-### Instructor toolbar extension for Jupyter notebooks
-The nbgrader toolbar extension for Jupyter notebooks guides the instructor through
-assignment and grading tasks using the familiar Jupyter notebook interface.
-
-![Creating assignment](nbgrader/docs/source/user_guide/images/creating_assignment.gif "Creating assignment")
-
-### Instructor "formgrader" extension for Jupyter notebooks
-
-The formgrader extension for the Jupyter notebook allows instructors to use
-the core functionality of nbgrader---generating the student version of an
-assignment, releasing assignments to students, collecting assignments,
-autograding submissions, and manually grading submissions.
-
-![Formgrader extension](nbgrader/docs/source/user_guide/images/formgrader.gif "Formgrader extension")
-
-### Student assignment list extension for Jupyter notebooks
-Using the assignment list extension, students may conveniently view, fetch,
-submit, and validate their assignments.
-
-![nbgrader assignment list](nbgrader/docs/source/user_guide/images/student_assignment.gif "nbgrader assignment list")
-
-### The command line tools of nbgrader
-
-[Command line tools](https://nbgrader.readthedocs.io/en/latest/command_line_tools/index.html)
-offer an efficient way for the instructor to generate, assign, release, collect,
-and grade notebooks.
-
-### SciPy 2017 overview talk (click to view on YouTube)
-
-[![nbgrader: A Tool for Creating and Grading Assignments in the Jupyter Notebook | SciPy 2017 ](http://img.youtube.com/vi/5WUm0QuJdFw/0.jpg)](http://www.youtube.com/watch?v=5WUm0QuJdFw "nbgrader: A Tool for Creating and Grading Assignments in the Jupyter Notebook | SciPy 2017 ")
-
-## Installation
-
-For detailed instructions on installing nbgrader and the nbgrader extensions
-for Jupyter notebook, please see [Installation](https://nbgrader.readthedocs.io/en/latest/user_guide/installation.html)
-section in the User Guide.
+- Operating system: mac os Catalina 10.15.4
+- nbgrader --version: 0.7.0.dev
+- jupyter notebook --version: 6.0.3
 
 
-## Contributing
-Please see the [contributing guidelines and documentation](https://nbgrader.readthedocs.io/en/latest/contributor_guide/overview.html).
+Disclaimer: Please use this code at your own risk. 
 
-If you want to develop features for nbgrader, please follow the
-[development installation instructions](https://nbgrader.readthedocs.io/en/latest/contributor_guide/installation_developer.html).
+
+## Step 1 
+Create a clean conda environment.
+
+```shell
+conda create -n nbgrader python==3.8.1 jupyterlab nodejs
+conda activate nbgrader 
+```
+
+## Step 2
+Clone the codes and install it by following the instructions at nbgrader.readthedocs.io, [development install](https://nbgrader.readthedocs.io/en/stable/contributor_guide/installation_developer.html).
+
+
+```
+git clone --single-branch --branch lab-common https://github.com/sdyang1729/nbgrader-to-jupyterlab
+cd nbgrader-to-jupyterlab
+pip install -r dev-requirements.txt -e .
+```
+
+## Step 3
+Install all the labextensions by following the instructions at jupyterlab.readthedocs.io for developing [JupyterLab extension](https://jupyterlab.readthedocs.io/en/stable/developer/extension_tutorial.html).
+
+```shell 
+cd ./nbgrader/labextensions/assignment_list
+jlpm install 
+jupyter labextension install . --no-build
+
+cd ../course_list
+jlpm install
+jupyter labextension install . --no-build
+
+cd ../create_assignment
+jlpm install
+jupyter labextension install . --no-build
+
+cd ../validate_assignment
+jlpm install
+jupyter labextension install . --no-build
+
+cd ../../..
+```
+
+
+
+## Step 4
+Install lab-serverextensions.
+
+```shell
+jupyter serverextension enable --user nbgrader.labextensions.assignment_list.assignment_list
+
+jupyter serverextension enable --user nbgrader.labextensions.course_list.course_list
+```
+
+Remark: 
+
+- One has to change lab\_app.web\_app to lab\_app in the line 19 of the file nbgrader.labextensions.assignment_list.assignment_list.\_\_init\_\_.py. Otherwise, assignment_list labextension does not work as it is supposed to. 
+
+- The following serverextensions are enabled. 
+	- nbgrader.labextensions.assignment_list.assignment_list
+	- nbgrader.labextensions.course_list.course_list
+
+- validate_asignment lab-serextension seems incomplete. In this install, we use the original. 
+
+
+
+## Step 5
+Install nb-serverextensions
+
+```shell
+jupyter serverextension enable --user nbgrader.server_extensions.formgrader
+jupyter serverextension enable --user nbgrader.server_extensions.validate_assignment
+jupyter serverextension enable --user nbgrader.labextensions.validate_assignment.validate_assignment
+```
+
+Remark:
+
+- I am installing the original formgrader and validate_assignment.  
+- This step installs the following two serverextensions. 
+	- nbgrader.server\_extensions.formgrader
+	- nbgrader.server\_extensions.validate\_assignment
+
+- I modified `assignment_list/src/assignmentlist` a little bit so that we use the original validate_assignment nb-serverextension. 
+
+## Step 6
+
+In the following, python/ is the root directory for a course where all the homeworks are stored.
+
+```
+cd /somewhere/in/my/computer/python
+jupyter lab --watch
+```
+
+Enjoy!
+
+
+## Remark
+
+- If formgrader pops up but does not list the homeworks properly, check if your course directoty is well made.  
+
+- If you change a file, then save it and perform the following command to make it work.
+
+  ```shell
+  jupyter lab build
+  ```
