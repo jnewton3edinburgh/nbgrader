@@ -55,8 +55,8 @@ with open("README.md", "r") as fh:
 setup_args = dict(
     name=name,
     version=version,
-    url="https://github.com/jupyter/nbgrader",
-    author="",
+    url="https://github.com/edina/nbgrader",
+    author="Abigail Almanza",
     description="Validate assignment button",
     long_description= long_description,
     long_description_content_type="text/markdown",

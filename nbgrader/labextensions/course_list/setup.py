@@ -55,7 +55,7 @@ with open("README.md", "r") as fh:
 setup_args = dict(
     name=name,
     version=version,
-    url="https://github.com/lxylxy123456/nbgrader",
+    url="https://github.com/edina/nbgrader",
     author="rkevin",
     description="Course list labextension for nbgrader",
     long_description= long_description,

@@ -17,4 +17,4 @@ def load_jupyter_server_extension(lab_app):
         JupyterLab application instance
     """
     setup_handlers(lab_app)
-    lab_app.log.info("Registered HelloWorld extension at URL path /assignment_list")
+    lab_app.log.info("Registered assignment_list extension at URL path /assignment_list")

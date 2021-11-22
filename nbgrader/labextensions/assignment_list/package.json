@@ -7,9 +7,9 @@
     "jupyterlab",
     "jupyterlab-extension"
   ],
-  "homepage": "https://github.com/my_name/myextension",
+  "homepage": "https://github.com/edina/nbgrader",
   "bugs": {
-    "url": "https://github.com/my_name/myextension/issues"
+    "url": "https://github.com/edina/nbgrader/issues"
   },
   "license": "BSD-3-Clause",
   "author": "Abigail Almanza",
@@ -22,7 +22,7 @@
   "style": "style/index.css",
   "repository": {
     "type": "git",
-    "url": "https://github.com/my_name/myextension.git"
+    "url": "https://github.com/edina/nbgrader.git"
   },
   "scripts": {
     "build": "jlpm run build:lib",

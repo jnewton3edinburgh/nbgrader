@@ -7,12 +7,12 @@
     "jupyterlab",
     "jupyterlab-extension"
   ],
-  "homepage": "https://github.com/lxylxy123456/nbgrader",
+  "homepage": "https://github.com/edina/nbgrader",
   "bugs": {
-    "url": "https://github.com/lxylxy123456/nbgrader/issues"
+    "url": "https://github.com/edina/nbgrader/issues"
   },
   "license": "BSD-3-Clause",
-  "author": "",
+  "author": "Abigail Almanza",
   "files": [
     "lib/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
     "style/**/*.{css,eot,gif,html,jpg,json,png,svg,woff2,ttf}"
@@ -22,7 +22,7 @@
   "style": "style/index.css",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lxylxy123456/nbgrader.git"
+    "url": "https://github.com/edina/nbgrader.git"
   },
   "scripts": {
     "build": "tsc",
