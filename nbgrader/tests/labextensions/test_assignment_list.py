@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import pytest
 import io
 import os
@@ -8,7 +6,9 @@ import time
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 from nbformat import write as write_nb
@@ -19,11 +19,11 @@ from .. import run_nbgrader
 from .conftest import notwindows, _make_nbserver, _make_browser, _close_nbserver, _close_browser
 from ...utils import rmtree
 
-
-
-@pytest.fixture(scope="module")
-def nbserver(request, port, tempdir, jupyter_config_dir, jupyter_data_dir, exchange, cache):
-    server = _make_nbserver("", port, tempdir, jupyter_config_dir, jupyter_data_dir, exchange, cache)
+@pytest.fixture(scope='module')
+def nbserver(request, port, tempdir, jupyter_config_dir, jupyter_data_dir,
+             exchange, cache):
+    server = _make_nbserver('', port, tempdir, jupyter_config_dir,
+                            jupyter_data_dir, exchange, cache)
 
     def fin():
         _close_nbserver(server)
@@ -69,18 +69,40 @@ def class_files(coursedir):
 
     return coursedir
 
-
 def _wait(browser):
     return WebDriverWait(browser, 10)
 
+def _find_element(browser: WebDriver, by, arg):
+    _wait(browser).until(lambda x: browser.find_element(by, arg))
+    element = browser.find_element(by, arg)
+    _wait(browser).until(EC.visibility_of(element)) 
 
-def _load_assignments_list(browser, port, retries=5):
+    return element
+
+
+def _click_when_available(browser: WebDriver, by, arg):
+    _wait(browser).until(lambda x: browser.find_element(by, arg))
+    element = browser.find_element(by, arg)
+    _wait(browser).until(EC.visibility_of(element))
+    _click_element(browser, element)
+    return element
+
+def _click_element(browser: WebDriver, element):
+    ActionChains(browser).click(element).perform()
+
+def _get_element(browser: WebDriver, css_selector):
+    try:
+        return browser.find_element_by_css_selector(css_selector)
+    except NoSuchElementException:
+        return None
+
+def _load_assignments_list(browser: WebDriver, port, retries=5):
     # go to the correct page
-    browser.get("http://localhost:{}/tree".format(port))
+    browser.get("http://localhost:{}/lab".format(port))
 
     def page_loaded(browser):
-        return browser.execute_script(
-            'return typeof IPython !== "undefined" && IPython.page !== undefined;')
+        logo_id = 'jp-MainLogo'
+        return len(browser.find_elements_by_id(logo_id)) > 0
 
     # wait for the page to load
     try:
@@ -94,63 +116,30 @@ def _load_assignments_list(browser, port, retries=5):
             print("Failed to load the page too many times")
             raise
 
-    # wait for the extension to load
-    _wait(browser).until(EC.presence_of_element_located((By.CSS_SELECTOR, "#assignments")))
-
-    # switch to the assignments list
-    element = browser.find_element_by_link_text("Assignments")
-    element.click()
+    side_bar_selector = '[data-id="command-palette"]'
+    al_selector = '[data-command="al:open"]'
+    time.sleep(1)
+    _click_when_available(browser, By.CSS_SELECTOR, side_bar_selector)
+    _click_when_available(browser, By.CSS_SELECTOR, al_selector)
 
     # make sure released, downloaded, and submitted assignments are visible
     _wait(browser).until(EC.visibility_of_element_located((By.CSS_SELECTOR, "#released_assignments_list")))
     _wait(browser).until(EC.visibility_of_element_located((By.CSS_SELECTOR, "#fetched_assignments_list")))
     _wait(browser).until(EC.visibility_of_element_located((By.CSS_SELECTOR, "#submitted_assignments_list")))
 
-
-def _expand(browser, list_id, assignment):
-    browser.find_element_by_id("fetched_assignments_list").find_element_by_link_text(assignment).click()
-    rows = browser.find_elements_by_css_selector("{} .list_item".format(list_id))
-    for i in range(1, len(rows)):
-        _wait(browser).until(lambda browser: browser.find_elements_by_css_selector("{} .list_item".format(list_id))[i].is_displayed())
-    return rows
-
-
-def _unexpand(browser, list_id, assignment):
-    browser.find_element_by_link_text(assignment).click()
-    rows = browser.find_elements_by_css_selector("{} .list_item".format(list_id))
-    for i in range(1, len(rows)):
-        _wait(browser).until(lambda browser: not browser.find_elements_by_css_selector("{} .list_item".format(list_id))[i].is_displayed())
-
-
-def _wait_for_modal(browser):
-    _wait(browser).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".modal-dialog")))
-
-
-def _dismiss_modal(browser):
-    button = browser.find_element_by_css_selector(".modal-footer .btn-primary")
-    button.click()
-
-    def modal_gone(browser):
-        try:
-            browser.find_element_by_css_selector(".modal-dialog")
-        except NoSuchElementException:
-            return True
-        return False
-    _wait(browser).until(modal_gone)
-
-
-def _sort_rows(x):
-    try:
-        item_name = x.find_element_by_class_name("item_name").text
-    except NoSuchElementException:
-        item_name = ""
-    return item_name
-
-
 def _wait_until_loaded(browser):
     _wait(browser).until(lambda browser: browser.find_element_by_id("course_list_default").text != "Loading, please wait...")
     _wait(browser).until(EC.element_to_be_clickable((By.ID, "course_list_dropdown")))
+    
 
+def _wait_for_list(browser, name, num_rows):
+    _wait(browser).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "#{}_assignments_list_loading".format(name))))
+    _wait(browser).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "#{}_assignments_list_placeholder".format(name))))
+    _wait(browser).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "#{}_assignments_list_error".format(name))))
+    _wait(browser).until(lambda browser: len(browser.find_elements_by_css_selector("#{}_assignments_list > .list_item".format(name))) == num_rows)
+    rows = browser.find_elements_by_css_selector("#{}_assignments_list > .list_item".format(name))
+    assert len(rows) == num_rows
+    return rows
 
 def _change_course(browser, course):
     # wait until the dropdown is enabled
@@ -173,16 +162,34 @@ def _change_course(browser, course):
     default = browser.find_element_by_css_selector("#course_list_default")
     assert default.text == course
 
-
-def _wait_for_list(browser, name, num_rows):
-    _wait(browser).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "#{}_assignments_list_loading".format(name))))
-    _wait(browser).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "#{}_assignments_list_placeholder".format(name))))
-    _wait(browser).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, "#{}_assignments_list_error".format(name))))
-    _wait(browser).until(lambda browser: len(browser.find_elements_by_css_selector("#{}_assignments_list > .list_item".format(name))) == num_rows)
-    rows = browser.find_elements_by_css_selector("#{}_assignments_list > .list_item".format(name))
-    assert len(rows) == num_rows
+def _expand(browser, list_id, assignment):
+    browser.find_element_by_id("fetched_assignments_list").find_element_by_link_text(assignment).click()
+    rows = browser.find_elements_by_css_selector("{} .list_item".format(list_id))
+    for i in range(1, len(rows)):
+        _wait(browser).until(lambda browser: browser.find_elements_by_css_selector("{} .list_item".format(list_id))[i].is_displayed())
     return rows
 
+def _unexpand(browser, list_id, assignment):
+    browser.find_element_by_link_text(assignment).click()
+    rows = browser.find_elements_by_css_selector("{} .list_item".format(list_id))
+    for i in range(1, len(rows)):
+        _wait(browser).until(lambda browser: not browser.find_elements_by_css_selector("{} .list_item".format(list_id))[i].is_displayed())
+
+def _sort_rows(x):
+    try:
+        item_name = x.find_element_by_class_name("item_name").text
+    except NoSuchElementException:
+        item_name = ""
+    return item_name
+
+def _dismiss_modal(browser):
+    ok_button = 'jp-Dialog-button'
+    _click_when_available(browser, By.CLASS_NAME, ok_button)
+
+def _wait_for_modal(browser):
+    
+    class_selector = 'jp-Dialog-content'
+    _wait(browser).until(EC.presence_of_all_elements_located((By.CLASS_NAME, class_selector)))
 
 @pytest.mark.nbextensions
 @notwindows
@@ -199,6 +206,8 @@ def test_show_assignments_list(browser, port, class_files, tempdir):
     run_nbgrader(["generate_assignment", "Problem Set 1", "--force"])
     run_nbgrader(["release_assignment", "Problem Set 1", "--course", "abc101", "--force"])
 
+    browser.refresh()
+    time.sleep(5)
     # click the refresh button
     browser.find_element_by_css_selector("#refresh_assignments_list").click()
     _wait_until_loaded(browser)
@@ -209,23 +218,19 @@ def test_show_assignments_list(browser, port, class_files, tempdir):
     assert rows[0].find_element_by_class_name("item_course").text == "abc101"
 
 
-@pytest.mark.nbextensions
 @notwindows
 def test_multiple_released_assignments(browser, port, class_files, tempdir):
-    _load_assignments_list(browser, port)
-    _wait_until_loaded(browser)
-
     # release another assignment
     run_nbgrader(["generate_assignment", "ps.01", "--force"])
     run_nbgrader(["release_assignment", "ps.01", "--course", "xyz 200", "--force"])
-
+    time.sleep(5)
     # click the refresh button
     browser.find_element_by_css_selector("#refresh_assignments_list").click()
     _wait_until_loaded(browser)
 
     # choose the course "xyz 200"
     _change_course(browser, "xyz 200")
-
+    
     rows = _wait_for_list(browser, "released", 1)
     assert rows[0].find_element_by_class_name("item_name").text == "ps.01"
     assert rows[0].find_element_by_class_name("item_course").text == "xyz 200"
@@ -234,12 +239,8 @@ def test_multiple_released_assignments(browser, port, class_files, tempdir):
 @pytest.mark.nbextensions
 @notwindows
 def test_fetch_assignment(browser, port, class_files, tempdir):
-    _load_assignments_list(browser, port)
-    _wait_until_loaded(browser)
-
     # choose the course "xyz 200"
     _change_course(browser, "xyz 200")
-
     # click the "fetch" button
     rows = _wait_for_list(browser, "released", 1)
     rows[0].find_element_by_css_selector(".item_status button").click()
@@ -263,12 +264,6 @@ def test_fetch_assignment(browser, port, class_files, tempdir):
 @pytest.mark.nbextensions
 @notwindows
 def test_submit_assignment(browser, port, class_files, tempdir):
-    _load_assignments_list(browser, port)
-    _wait_until_loaded(browser)
-
-    # choose the course "xyz 200"
-    _change_course(browser, "xyz 200")
-
     # submit it
     rows = _wait_for_list(browser, "fetched", 1)
     rows[0].find_element_by_css_selector(".item_status button").click()
@@ -282,7 +277,6 @@ def test_submit_assignment(browser, port, class_files, tempdir):
     assert len(rows) == 1
 
     # submit it again
-    time.sleep(1)
     rows = browser.find_elements_by_css_selector("#fetched_assignments_list > .list_item")
     rows[0].find_element_by_css_selector(".item_status button").click()
 
@@ -300,12 +294,6 @@ def test_submit_assignment(browser, port, class_files, tempdir):
 @pytest.mark.nbextensions
 @notwindows
 def test_submit_assignment_missing_notebooks(browser, port, class_files, tempdir):
-    _load_assignments_list(browser, port)
-    _wait_until_loaded(browser)
-
-    # choose the course "xyz 200"
-    _change_course(browser, "xyz 200")
-
     # rename an assignment notebook
     assert os.path.exists(os.path.join(tempdir, "ps.01"))
     if os.path.isfile(os.path.join(tempdir, "ps.01", "problem 1.ipynb")):
@@ -322,6 +310,7 @@ def test_submit_assignment_missing_notebooks(browser, port, class_files, tempdir
     rows = _wait_for_list(browser, "submitted", 1)
     assert rows[0].find_element_by_class_name("item_name").text == "ps.01"
     assert rows[0].find_element_by_class_name("item_course").text == "xyz 200"
+    
     rows = browser.find_elements_by_css_selector("#nbgrader-xyz_200-ps01-submissions > .list_item")
     rows = rows[1:]  # first row is empty
     assert len(rows) == 3
@@ -330,7 +319,7 @@ def test_submit_assignment_missing_notebooks(browser, port, class_files, tempdir
     timestamp3 = rows[2].find_element_by_css_selector(".item_name").text
     assert timestamp1 != timestamp2
     assert timestamp2 != timestamp3
-
+    
     # set strict flag
     with open('nbgrader_config.py', 'a') as config:
         config.write('c.ExchangeSubmit.strict = True')
@@ -339,15 +328,17 @@ def test_submit_assignment_missing_notebooks(browser, port, class_files, tempdir
     rows = browser.find_elements_by_css_selector("#fetched_assignments_list > .list_item")
     rows[0].find_element_by_css_selector(".item_status button").click()
 
+    
     # wait for the modal dialog to appear
     _wait_for_modal(browser)
 
     # check that the submission failed
-    browser.find_element_by_css_selector(".modal-dialog")
-
+    assert browser.find_element_by_class_name("jp-Dialog-header").text == "Invalid Submission"
+    
     # close the modal dialog
     _dismiss_modal(browser)
 
+    
     # check submitted assignments list remains unchanged
     rows = _wait_for_list(browser, "submitted", 1)
     assert rows[0].find_element_by_class_name("item_name").text == "ps.01"
@@ -363,15 +354,12 @@ def test_submit_assignment_missing_notebooks(browser, port, class_files, tempdir
             os.path.join(tempdir, "ps.01", "my problem 1.ipynb"),
             os.path.join(tempdir, "ps.01", "problem 1.ipynb")
         )
-
-
+    
 @pytest.mark.nbextensions
 @notwindows
 def test_fetch_second_assignment(browser, port, class_files, tempdir):
-    _load_assignments_list(browser, port)
-    _wait_until_loaded(browser)
-
     # click the "fetch" button
+    _change_course(browser, "abc101")
     rows = _wait_for_list(browser, "released", 1)
     rows[0].find_element_by_css_selector(".item_status button").click()
 
@@ -396,9 +384,6 @@ def test_fetch_second_assignment(browser, port, class_files, tempdir):
 @pytest.mark.nbextensions
 @notwindows
 def test_submit_other_assignment(browser, port, class_files, tempdir):
-    _load_assignments_list(browser, port)
-    _wait_until_loaded(browser)
-
     # submit it
     rows = _wait_for_list(browser, "fetched", 1)
     rows[0].find_element_by_css_selector(".item_status button").click()
@@ -411,13 +396,9 @@ def test_submit_other_assignment(browser, port, class_files, tempdir):
     rows = rows[1:]  # first row is empty
     assert len(rows) == 1
 
-
 @pytest.mark.nbextensions
 @notwindows
 def test_validate_ok(browser, port, class_files, tempdir):
-    _load_assignments_list(browser, port)
-    _wait_until_loaded(browser)
-
     # choose the course "xyz 200"
     _change_course(browser, "xyz 200")
 
@@ -435,17 +416,17 @@ def test_validate_ok(browser, port, class_files, tempdir):
     _wait_for_modal(browser)
 
     # check that it succeeded
-    browser.find_element_by_css_selector(".modal-dialog .validation-success")
+    assert browser.find_element_by_class_name("jp-Dialog-header").text == "Validation Results"
+    #browser.find_element_by_css_selector(".modal-dialog .validation-success")
 
     # close the modal dialog
     _dismiss_modal(browser)
 
-
 @pytest.mark.nbextensions
 @notwindows
 def test_validate_failure(browser, port, class_files, tempdir):
-    _load_assignments_list(browser, port)
-    _wait_until_loaded(browser)
+    #chagne couse
+    _change_course(browser, "abc101")
 
     # expand the assignment to show the notebooks
     _wait_for_list(browser, "fetched", 1)
@@ -462,11 +443,10 @@ def test_validate_failure(browser, port, class_files, tempdir):
     _wait_for_modal(browser)
 
     # check that it succeeded
-    browser.find_element_by_css_selector(".modal-dialog .validation-failed")
+    assert browser.find_element_by_class_name("jp-Dialog-header").text == "Validation Results"
 
     # close the modal dialog
     _dismiss_modal(browser)
-
 
 @pytest.mark.nbextensions
 @notwindows
@@ -475,7 +455,8 @@ def test_missing_exchange(exchange, browser, port, class_files, tempdir):
     rmtree(exchange)
     rmtree(os.path.join(tempdir, "Problem Set 1"))
 
-    _load_assignments_list(browser, port)
+    # click the refresh button
+    browser.find_element_by_css_selector("#refresh_assignments_list").click()
     _wait_until_loaded(browser)
 
     # make sure all the errors are showing
@@ -494,6 +475,8 @@ def test_missing_exchange(exchange, browser, port, class_files, tempdir):
     run_nbgrader(["generate_assignment", "Problem Set 1", "--force"])
     run_nbgrader(["release_assignment", "Problem Set 1", "--course", "abc101", "--force"])
 
+    browser.refresh()
+    time.sleep(1)
     # click the refresh button
     browser.find_element_by_css_selector("#refresh_assignments_list").click()
     _wait_until_loaded(browser)
