@@ -1,18 +1,20 @@
 include LICENSE
-include README.md
+include *.md
 include pyproject.toml
 
-include jupyter-config/assignment_list.json
-
 include package.json
+include install.json
 include ts*.json
-include assignment_list/labextension/*.tgz
+include yarn.lock
+
+graft cookiecutter_template/labextension
 
 # Javascript files
 graft src
 graft style
 prune **/node_modules
 prune lib
+prune binder
 
 # Patterns to exclude from any directory
 global-exclude *~

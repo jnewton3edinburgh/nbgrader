@@ -192,7 +192,6 @@ const extension: JupyterFrontEndPlugin<void> = {
           widget.title.label = 'Assignments';
           widget.title.closable = true;
         }
-
         if(!tracker.has(widget)){
           // Track the state of the widget for later restoration
           tracker.add(widget);
