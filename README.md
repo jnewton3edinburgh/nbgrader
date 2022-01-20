@@ -30,6 +30,8 @@ nbgrader quickstart:
 * `nbgrader quickstart course_id`
 This will setup a course (replace `course_id` with whatever) so you can use the extensions
 
+The labextensions should be visible via the command palette. Double click Assignment List to open the Assignment List panel.
+
 Creating a new extension:
 (Following: https://github.com/jupyterlab/extension-cookiecutter-ts)
 To create a cookiecutter extension:
