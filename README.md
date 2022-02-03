@@ -1,5 +1,5 @@
 # Build instructions
-Clone Berts nbgrader repository (https://github.com/BertR/nbgrader) or my fork of it (https://github.com/jnewton3edinburgh/nbgrader). The only difference being a cookiecutter extension being added on mine.
+Clone Berts nbgrader repository (https://github.com/BertR/nbgrader/tree/jplab_a) or my fork of it (https://github.com/jnewton3edinburgh/nbgrader). The only difference being a cookiecutter extension being added on mine.
  
 Setup dev environment:
 Fresh python virtual env (I used asdf to manage a python version locally. I used 3.9.9)
