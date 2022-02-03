@@ -6,6 +6,9 @@ Fresh python virtual env (I used asdf to manage a python version locally. I used
 * `pip install -r dev-requirements.txt -e .`
 * `pip install "jupyterlab==2.3.2"`
 
+To run jupyter lab:
+* `jupyter lab`
+
 To enable the extensions:
 * `jupyter labextension list`
 * `jupyter labextension install . --no-build`
